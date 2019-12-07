@@ -37,6 +37,7 @@ In the first paragraph, describe the data used and general methodological approa
 library(nhanesA) 
 library(plyr)
 library(dplyr)
+library(tidyverse)
 
 varlist <- c("DEMO", "TST", "BMX", "SMQ", "ALQ", "PAQ") 
 varlist_years <- paste0(varlist, c("_I"))
@@ -72,39 +73,44 @@ variables.wanted <- c("SEQN","RIAGENDR","RIDAGEYR","RIDRETH1", "LBXTST", "LBXEST
 
 #Assign name to each variable
 #Get rid of useless observations
-nhanes.practice <- nhanes.data %>%
+nhanes <- nhanes.data %>%
   select(id=SEQN, gender=RIAGENDR, age=RIDAGEYR, race=RIDRETH1, testosterone=LBXTST, estradiol=LBXEST, SHBG=LBXSHBG, BMI=BMXBMI, smoke=SMQ040, alcohol=ALQ120Q, activity1=PAQ610, activity2=PAQ620) %>%
   mutate(gender=factor(gender, levels=c(1, 2), labels=c("male", "female"))) %>%
   mutate(race=factor(race, levels=c(3, 1, 2, 4, 5), labels=c("white", "MexicanAmerican", "Hispanic", "black", "other"))) %>%
   mutate(smoke=factor(smoke, levels=c(1, 2, 3), labels = c("EveryDay", "SomeDays", "NotAtAll"))) %>%
+  #mutate(alcohol =cut(alcohol, breaks(0, )), labels) %>%
   filter(gender == "female") %>%
   filter(age %in% c(12:80)) %>%
   filter(!is.na(testosterone)) %>%
   filter(!is.na(estradiol)) %>%
   filter(!is.na(SHBG)) %>%
   filter(!is.na(BMI)) %>%
-  filter(!is.na(activity1)|!is.na(activity2)) #%>%
+  mutate(BMI = cut(BMI, breaks=c(0, 18, 25, 30, 65), labels=c("Underweight", "NormalWeight", "Overweight", "Obese"))) %>%
+  filter(!is.na(activity1)|!is.na(activity2))
 
 # Exclude age over 18 with no smoking status
-# Questionnaire was conducted among people over 18, smoking status for observations whose age are under 18 would be assigned to “NotAtAll”
-nhanes.practice <- filter(nhanes.practice, age < 18 | (age >= 18 & !is.na(smoke) ))
-nhanes.practice$smoke <- as.character(nhanes.practice$smoke)
-nhanes.practice$smoke[is.na(nhanes.practice$smoke)] <- "NotAtAll"
-nhanes.practice$smoke <- as.factor(nhanes.practice$smoke)
+# Questionnaire was conducted among people over 18, smoking status for observations whose age are under 18 would be assigned to "NotAtAll"
+nhanes <- filter(nhanes, age < 18 | (age >= 18 & !is.na(smoke)))
+nhanes$smoke <- as.character(nhanes$smoke)
+nhanes$smoke[is.na(nhanes$smoke)] <- "NotAtAll"
+nhanes$smoke <- as.factor(nhanes$smoke)
 
 # Exclude age over 18 with no alcohol consumption status
 # Questionnaire was conducted among people over 18, alcohol consumption status for observations whose age are under 18 would be assigned to “0”, which means never drink alcohol
-nhanes.practice <- filter(nhanes.practice, age < 18 | (age >= 18 & !is.na(alcohol) ))
-nhanes.practice$alcohol <- as.numeric(nhanes.practice$alcohol)
-nhanes.practice$alcohol[is.na(nhanes.practice$alcohol)] <- 0
-nhanes.practice$alcohol <- as.factor(nhanes.practice$alcohol)
+nhanes <- filter(nhanes, age < 18 | (age >= 18 & !is.na(alcohol) ))
+nhanes$alcohol <- as.numeric(nhanes$alcohol)
+nhanes$alcohol[is.na(nhanes$alcohol)] <- 0
+nhanes$alcohol <- as.factor(nhanes$alcohol)
 
 # Get the total number of days doing moderate to vigorous activities
 # Observations with days of activities larger than 7 days will be excluded
 # Delete column activity1 and column activity2
-nhanes.practice$activity <- rowSums(nhanes.practice[,c("activity1", "activity2")], na.rm=TRUE)
-nhanes.practice <- filter(nhanes.practice, activity < 8)
-nhanes.practice <- nhanes.practice[, -c(11:12)]
+nhanes$activity <- rowSums(nhanes[,c("activity1", "activity2")], na.rm=TRUE)
+nhanes <- filter(nhanes, activity < 8)
+nhanes <- nhanes[, -c(11:12)]
+
+# The overall information of participants in this questionnaire, including gender, age, race, testosterone level, estradiol level, SHBG level, BMI level, smoking status, alcohol consumption and physical activity
+summary(nhanes)
 
 ```
 
@@ -112,22 +118,41 @@ nhanes.practice <- nhanes.practice[, -c(11:12)]
 
 ```{r eval = TRUE}
 library(ggplot2)
+library(cowplot)
 
-ggplot(data = nhanes.practice, aes(Sepal.Length, Petal.Length, color = Petal.Width)) + 
-    geom_point() + 
-    labs(title = "Iris Characteristics") +
-    labs(x = "Sepal Length", y = "Petal Length") 
+# Scatter plot for age and each sex hormone marker expression level
+ggplot(data = nhanes, aes(x = age, y = testosterone)) +
+    geom_point()
 
+# Box plot for race, BMI, smoke, alcohol, and activity
+r1 <- ggplot(data = nhanes, aes(x = factor(race), y = testosterone)) + geom_boxplot()
+r2 <- ggplot(data = nhanes, aes(x = factor(race), y = estradiol)) + geom_boxplot()
+r3 <- ggplot(data = nhanes, aes(x = factor(race), y = SHBG)) + geom_boxplot()
 
-
-#Histograms
-ggplot(data = nhanes.practice, aes(age)) + 
-    geom_histogram(breaks = seq(11, 80, 1), color = "blue", fill = "blue", alpha = 0.7) 
-
-
-
+plot_grid(r1, r2, r3, labels = "AUTO")
 
 
+b1 <- ggplot(data = nhanes, aes(x = factor(BMI), y = testosterone)) + geom_boxplot()
+b2 <- ggplot(data = nhanes, aes(x = factor(BMI), y = estradiol)) + geom_boxplot()
+b3 <- ggplot(data = nhanes, aes(x = factor(BMI), y = SHBG)) + geom_boxplot()
+
+plot_grid(b1, b2, b3, labels = "AUTO")
+
+s1 <- ggplot(data = nhanes, aes(x = factor(smoke), y = testosterone)) + geom_boxplot()
+s2 <- ggplot(data = nhanes, aes(x = factor(smoke), y = estradiol)) + geom_boxplot()
+s3 <- ggplot(data = nhanes, aes(x = factor(smoke), y = SHBG)) + geom_boxplot()
+
+plot_grid(s1, s2, s3, labels = "AUTO")
+
+
+ggplot(data = nhanes, aes(x = factor(alcohol), y = testosterone)) +
+    geom_boxplot()
+
+a1 <- ggplot(data = nhanes, aes(x = factor(activity), y = testosterone)) + geom_boxplot()
+a2 <- ggplot(data = nhanes, aes(x = factor(activity), y = estradiol)) + geom_boxplot()
+a3 <- ggplot(data = nhanes, aes(x = factor(activity), y = SHBG)) + geom_boxplot()
+
+plot_grid(a1, a2, a3, labels = "AUTO")
 ```
 
 ### Results
