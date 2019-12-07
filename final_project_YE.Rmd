@@ -1,5 +1,5 @@
 ---
-title: "Relationship of sex sterid hormone with lifestyle in US women"
+title: "Relationship of sex sterid hormone with lifestyle among US women"
 author: "Ziqing Ye"
 output: 
   html_document:
@@ -17,13 +17,8 @@ Use this template to complete your project throughout the course. Your Final Pro
 ### Overview
 In this section, give a brief a description of your project and its goal, what data you are using to complete it, and what three faculty/staff in different fields you have spoken to about your project with a brief summary of what you learned from each person. Include a link to your final project GitHub repository.
 
-> How does sex hormone vary due to demographics, weight(BMI), and diet/fasting habit (possibly smoking habits and alchohal comsuption) 
+> How does sex hormone vary due to demographics, weight(BMI), smoking habits, alchohal comsuption, physical activities
 
-> include physical activity
-
-> use mapping??
-
-> what concentration of sex hormone would lead to diseases?
 
 
 ### Introduction 
@@ -43,7 +38,7 @@ library(nhanesA)
 library(plyr)
 library(dplyr)
 
-varlist <- c("DEMO", "TST", "BMX", "FASTQX", "SMQ", "ALQ") 
+varlist <- c("DEMO", "TST", "BMX", "SMQ", "ALQ", "PAQ") 
 varlist_years <- paste0(varlist, c("_I"))
 
 #Load everything from varlist_years in nhanes as a list
@@ -62,7 +57,6 @@ rm(list = grep("_[DEFGHI]", ls(), value = T))
 
 #Create a single data.frame that combines all modules 
 nhanes.data <- merge(get(varlist[1]), get(varlist[2]), by = "SEQN", all = T)
-#The following for loop could be used if more than two modules selected
 for (i in 3:length(varlist)){
   nhanes.data <- merge(nhanes.data, get(varlist[i]), by="SEQN", all=T)
 } 
@@ -74,21 +68,65 @@ rm(list = ls()[-which(ls() == "nhanes.data")])
 
 ```{r eval = TRUE}
 #Choose varaibles
-variables.wanted <- c("SEQN","RIAGENDR","RIDAGEYR","RIDRETH1", "LBXTST", "LBXEST", "LBXSHBG", "BMXBMI", "SMQ040", "ALQ130", "PHAFSTHR")
+variables.wanted <- c("SEQN","RIAGENDR","RIDAGEYR","RIDRETH1", "LBXTST", "LBXEST", "LBXSHBG", "BMXBMI", "SMQ040", "ALQ120Q", "PAQ610", "PAQ620")
 
 #Assign name to each variable
+#Get rid of useless observations
 nhanes.practice <- nhanes.data %>%
-    select(id=SEQN, gender=RIAGENDR, age=RIDAGEYR, race=RIDRETH1, testosterone=LBXTST, estradiol=LBXEST, SHBG=LBXSHBG, BMI=BMXBMI, smoke=SMQ040, alcohol=ALQ130, fast=PHAFSTHR) %>%
-    mutate(gender=factor(gender, levels=c(1, 2), labels=c("male", "female"))) %>%
-    mutate(race=factor(race, levels=c(3, 1, 2, 4, 5), labels=c("white", "MexicanAmerican", "Hispanic", "black", "other"))) %>%
-    mutate(smoke=factor(smoke, levels=c(1, 2, 3, 7, 9), labels = c("EveryDay", "SomeDays", "NotAtAll", "Refused", "DontKnow")))
+  select(id=SEQN, gender=RIAGENDR, age=RIDAGEYR, race=RIDRETH1, testosterone=LBXTST, estradiol=LBXEST, SHBG=LBXSHBG, BMI=BMXBMI, smoke=SMQ040, alcohol=ALQ120Q, activity1=PAQ610, activity2=PAQ620) %>%
+  mutate(gender=factor(gender, levels=c(1, 2), labels=c("male", "female"))) %>%
+  mutate(race=factor(race, levels=c(3, 1, 2, 4, 5), labels=c("white", "MexicanAmerican", "Hispanic", "black", "other"))) %>%
+  mutate(smoke=factor(smoke, levels=c(1, 2, 3), labels = c("EveryDay", "SomeDays", "NotAtAll"))) %>%
+  filter(gender == "female") %>%
+  filter(age %in% c(12:80)) %>%
+  filter(!is.na(testosterone)) %>%
+  filter(!is.na(estradiol)) %>%
+  filter(!is.na(SHBG)) %>%
+  filter(!is.na(BMI)) %>%
+  filter(!is.na(activity1)|!is.na(activity2)) #%>%
+
+# Exclude age over 18 with no smoking status
+# Questionnaire was conducted among people over 18, smoking status for observations whose age are under 18 would be assigned to “NotAtAll”
+nhanes.practice <- filter(nhanes.practice, age < 18 | (age >= 18 & !is.na(smoke) ))
+nhanes.practice$smoke <- as.character(nhanes.practice$smoke)
+nhanes.practice$smoke[is.na(nhanes.practice$smoke)] <- "NotAtAll"
+nhanes.practice$smoke <- as.factor(nhanes.practice$smoke)
+
+# Exclude age over 18 with no alcohol consumption status
+# Questionnaire was conducted among people over 18, alcohol consumption status for observations whose age are under 18 would be assigned to “0”, which means never drink alcohol
+nhanes.practice <- filter(nhanes.practice, age < 18 | (age >= 18 & !is.na(alcohol) ))
+nhanes.practice$alcohol <- as.numeric(nhanes.practice$alcohol)
+nhanes.practice$alcohol[is.na(nhanes.practice$alcohol)] <- 0
+nhanes.practice$alcohol <- as.factor(nhanes.practice$alcohol)
+
+# Get the total number of days doing moderate to vigorous activities
+# Observations with days of activities larger than 7 days will be excluded
+# Delete column activity1 and column activity2
+nhanes.practice$activity <- rowSums(nhanes.practice[,c("activity1", "activity2")], na.rm=TRUE)
+nhanes.practice <- filter(nhanes.practice, activity < 8)
+nhanes.practice <- nhanes.practice[, -c(11:12)]
+
 ```
 
 > Exploratory analysis
 
 ```{r eval = TRUE}
 library(ggplot2)
-library(cowplot)
+
+ggplot(data = nhanes.practice, aes(Sepal.Length, Petal.Length, color = Petal.Width)) + 
+    geom_point() + 
+    labs(title = "Iris Characteristics") +
+    labs(x = "Sepal Length", y = "Petal Length") 
+
+
+
+#Histograms
+ggplot(data = nhanes.practice, aes(age)) + 
+    geom_histogram(breaks = seq(11, 80, 1), color = "blue", fill = "blue", alpha = 0.7) 
+
+
+
+
 
 ```
 
