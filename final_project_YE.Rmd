@@ -19,14 +19,11 @@ In this section, give a brief a description of your project and its goal, what d
 
 > How does sex hormone vary due to demographics, weight(BMI), smoking habits, alchohal comsuption, physical activities
 
-
-
 ### Introduction 
 In the first paragraph, describe the problem addressed, its significance, and some background to motivate the problem.
 
 In the second paragraph, explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff.
 
-> 
 
 ### Methods
 In the first paragraph, describe the data used and general methodological approach. Subsequently, incorporate full R code necessary to retrieve and clean data, and perform analysis. Be sure to include a description of code so that others (including your future self) can understand what you are doing and why. 
@@ -78,7 +75,6 @@ nhanes <- nhanes.data %>%
   mutate(gender=factor(gender, levels=c(1, 2), labels=c("male", "female"))) %>%
   mutate(race=factor(race, levels=c(3, 1, 2, 4, 5), labels=c("white", "MexicanAmerican", "Hispanic", "black", "other"))) %>%
   mutate(smoke=factor(smoke, levels=c(1, 2, 3), labels = c("EveryDay", "SomeDays", "NotAtAll"))) %>%
-  #mutate(alcohol =cut(alcohol, breaks(0, )), labels) %>%
   filter(gender == "female") %>%
   filter(age %in% c(12:80)) %>%
   filter(!is.na(testosterone)) %>%
@@ -88,19 +84,23 @@ nhanes <- nhanes.data %>%
   mutate(BMI = cut(BMI, breaks=c(0, 18, 25, 30, 65), labels=c("Underweight", "NormalWeight", "Overweight", "Obese"))) %>%
   filter(!is.na(activity1)|!is.na(activity2))
 
-# Exclude age over 18 with no smoking status
-# Questionnaire was conducted among people over 18, smoking status for observations whose age are under 18 would be assigned to "NotAtAll"
+# Questionnaire was conducted among people over 18
+# Exclude observations with age over 18 with no smoking status
+# Smoking status for observations with age under 18 would be assigned to "NotAtAll"
 nhanes <- filter(nhanes, age < 18 | (age >= 18 & !is.na(smoke)))
 nhanes$smoke <- as.character(nhanes$smoke)
 nhanes$smoke[is.na(nhanes$smoke)] <- "NotAtAll"
 nhanes$smoke <- as.factor(nhanes$smoke)
 
-# Exclude age over 18 with no alcohol consumption status
-# Questionnaire was conducted among people over 18, alcohol consumption status for observations whose age are under 18 would be assigned to “0”, which means never drink alcohol
-nhanes <- filter(nhanes, age < 18 | (age >= 18 & !is.na(alcohol) ))
+# Questionnaire was conducted among people over 18
+# Exclude observations with age over 18 with no alcohol consumption status
+# Alcohol consumption status for observations with age under 18 assigned to “0”, which means no alcohol over the past 12 months
+nhanes <- filter(nhanes, age < 18 | (age >= 18 & !is.na(alcohol)))
 nhanes$alcohol <- as.numeric(nhanes$alcohol)
 nhanes$alcohol[is.na(nhanes$alcohol)] <- 0
-nhanes$alcohol <- as.factor(nhanes$alcohol)
+nhanes$alcohol <- cut(nhanes$alcohol, breaks=c(-Inf, 0, 3, 6, Inf), labels=c("0", "1-3", "4-6", "6+"))
+nhanes$alcohol <- as.factor(nhanes$alcohol) 
+
 
 # Get the total number of days doing moderate to vigorous activities
 # Observations with days of activities larger than 7 days will be excluded
@@ -111,6 +111,8 @@ nhanes <- nhanes[, -c(11:12)]
 
 # The overall information of participants in this questionnaire, including gender, age, race, testosterone level, estradiol level, SHBG level, BMI level, smoking status, alcohol consumption and physical activity
 summary(nhanes)
+
+
 
 ```
 
@@ -145,8 +147,11 @@ s3 <- ggplot(data = nhanes, aes(x = factor(smoke), y = SHBG)) + geom_boxplot()
 plot_grid(s1, s2, s3, labels = "AUTO")
 
 
-ggplot(data = nhanes, aes(x = factor(alcohol), y = testosterone)) +
-    geom_boxplot()
+h1 <- ggplot(data = nhanes, aes(x = factor(alcohol), y = testosterone)) + geom_boxplot()
+h2 <- ggplot(data = nhanes, aes(x = factor(alcohol), y = estradiol)) + geom_boxplot()
+h3 <- ggplot(data = nhanes, aes(x = factor(alcohol), y = SHBG)) + geom_boxplot()
+
+plot_grid(h1, h2, h3, labels = "AUTO")
 
 a1 <- ggplot(data = nhanes, aes(x = factor(activity), y = testosterone)) + geom_boxplot()
 a2 <- ggplot(data = nhanes, aes(x = factor(activity), y = estradiol)) + geom_boxplot()
@@ -157,3 +162,7 @@ plot_grid(a1, a2, a3, labels = "AUTO")
 
 ### Results
 Describe your results and include relevant tables, plots, and code/comments used to obtain them. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
+
+```{r eval = TRUE}
+
+```
