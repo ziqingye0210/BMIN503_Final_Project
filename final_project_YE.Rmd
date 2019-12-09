@@ -17,17 +17,25 @@ Use this template to complete your project throughout the course. Your Final Pro
 ### Overview
 This project investigates how sex steroid hormone vary due to demographics, BMI, smoking habits, alchohal comsuption, physical activities using the data of sex hormone markers retrieved from NHANES 2015-2016 Demographics Data, Examination Data, Labratory Data, and Questionnaire Data. Professors that I have talked to helped me with desgining the project and how to analyze the data.
 
-[link to my github repository]: (https://github.com/ziqingye0210/BMIN503_Final_Project)
+[Link to my Github repository]: (https://github.com/ziqingye0210/BMIN503_Final_Project)
 
 
 ### Introduction 
-In the first paragraph, describe the problem addressed, its significance, and some background to motivate the problem.
+Unhealthy sex hormone level in women may cause many diseases, such as Polycystic Ovary Syndrome (PCOS), androgen excess and cancer. An estimated 5 to 7 million women in the united States suffer with the effects of PCOS; and PCOS can occur in girls as young as 11 years old. Androgen excess in women and the associated chronic diseases are a public health concern. The data set retrieved from NHANES could be used to assist in prevention of diseases mentioned above.
 
-In the second paragraph, explain why your problem is interdisciplinary, what fields can contribute to its understanding, and incorporate background related to what you learned from meeting with faculty/staff.
+To understand how sex steroid hormone vary due to demographics, BMI, smoking habits, alchohal comsuption, physical activities, the knowledge of what sex hormone markers could be used show changes in sex steroid hormone level is require. In addition, the bioinformatics knowledge that I learned in class also helped me find the approporate data set, retrieve data set, analyze data and use the result to address the research question raised. 
 
 
 ### Methods
-In the first paragraph, describe the data used and general methodological approach. Subsequently, incorporate full R code necessary to retrieve and clean data, and perform analysis. Be sure to include a description of code so that others (including your future self) can understand what you are doing and why. 
+The data sets used were retrieved from NANES 2015-2016 Demographics Data, Examination Data, Labratory Data, and Questionnaire Data. After retriving and cleaning data set, I applied linear regression models on each predictors and multivariate regresson models on all predictors to identify the preditors are most significantly related to change in sex steroid hormone level. Then I used k-means clustering to identify statistically determined profiles with sex hormone markers data. Finally, I analyzed women belong to which race, age range and BMI range are more likely to have higher or lower sex hormone levels.
+
+> Download packages
+
+```{r eval = TRUE}
+# These two packages are used for determining the optimal number of k-mean clusters
+pkgs <- c("factoextra",  "NbClust")
+install.packages(pkgs)
+```
 
 > Retrieve data
 
@@ -37,6 +45,7 @@ library(plyr)
 library(dplyr)
 library(tidyverse)
 
+# The data sets that I used are demographic variables and sample weights (DEMO_I), Sex Steroid Hormone - Serum (TST_I), Body Measures (BMX_I), Smoking - Cigarette Use (SMQ_I), Alcohol Use (ALQ_I), and Pysical Activity (PAQ_I).
 varlist <- c("DEMO", "TST", "BMX", "SMQ", "ALQ", "PAQ") 
 varlist_years <- paste0(varlist, c("_I"))
 
@@ -60,7 +69,6 @@ for (i in 3:length(varlist)){
   nhanes.data <- merge(nhanes.data, get(varlist[i]), by="SEQN", all=T)
 } 
 rm(list = ls()[-which(ls() == "nhanes.data")])
-
 ```
 
 > Clean data
@@ -69,8 +77,8 @@ rm(list = ls()[-which(ls() == "nhanes.data")])
 #Choose varaibles
 variables.wanted <- c("SEQN","RIAGENDR","RIDAGEYR","RIDRETH1", "LBXTST", "LBXEST", "LBXSHBG", "BMXBMI", "SMQ040", "ALQ120Q", "PAQ610", "PAQ620")
 
-#Assign name to each variable
-#Get rid of useless observations
+# Assign name to each variable and label levels for variables
+# Exclude observations with no testosterone, estradiol, SHBG, BMI, activity data
 nhanes <- nhanes.data %>%
   select(id=SEQN, gender=RIAGENDR, age=RIDAGEYR, race=RIDRETH1, testosterone=LBXTST, estradiol=LBXEST, SHBG=LBXSHBG, BMI=BMXBMI, smoke=SMQ040, alcohol=ALQ120Q, activity1=PAQ610, activity2=PAQ620) %>%
   mutate(gender=factor(gender, levels=c(1, 2), labels=c("male", "female"))) %>%
@@ -83,9 +91,10 @@ nhanes <- nhanes.data %>%
   filter(!is.na(SHBG)) %>%
   filter(!is.na(BMI)) %>%
   mutate(BMI = cut(BMI, breaks=c(0, 18, 25, 30, 65), labels=c("Underweight", "NormalWeight", "Overweight", "Obese"))) %>%
+  # activity 1 indicates number of days doing vigorous work and activity 2 indicates number of days doing moderate work
   filter(!is.na(activity1)|!is.na(activity2))
 
-# Questionnaire was conducted among people over 18
+# Questionnaire was conducted among people over 18, therefore no smoking status reported for teenagers
 # Exclude observations with age over 18 with no smoking status
 # Smoking status for observations with age under 18 would be assigned to "NotAtAll"
 nhanes <- filter(nhanes, age < 18 | (age >= 18 & !is.na(smoke)))
@@ -93,9 +102,9 @@ nhanes$smoke <- as.character(nhanes$smoke)
 nhanes$smoke[is.na(nhanes$smoke)] <- "NotAtAll"
 nhanes$smoke <- as.factor(nhanes$smoke)
 
-# Questionnaire was conducted among people over 18
+# Questionnaire was conducted among people over 18, therefore no alcohol consumption reported for teenagers
 # Exclude observations with age over 18 with no alcohol consumption status
-# Alcohol consumption status for observations with age under 18 assigned to “0”, which means no alcohol over the past 12 months
+# Alcohol consumption status for observations with age under 18 assigned to “0”, which means no alcohol consumption over the past 12 months
 nhanes <- filter(nhanes, age < 18 | (age >= 18 & !is.na(alcohol)))
 nhanes$alcohol <- as.numeric(nhanes$alcohol)
 nhanes$alcohol[is.na(nhanes$alcohol)] <- 0
@@ -106,10 +115,10 @@ nhanes$alcohol <- as.factor(nhanes$alcohol)
 nhanes$age <- cut(nhanes$age, breaks=c(11, 18, 29, 49, 69, Inf), labels=c("12-18", "19-29", "39-49", "50-69", "70+"))
 
 # Get the total number of days doing moderate to vigorous activities
-# Observations with days of activities larger than 7 days will be excluded
+# Observations with total number of days doing moderate to vigorous activities over 7 days will be set to 7
 # Delete column activity1 and column activity2
 nhanes$activity <- rowSums(nhanes[,c("activity1", "activity2")], na.rm=TRUE)
-nhanes <- filter(nhanes, activity < 8)
+nhanes$activity[nhanes$activity > 7] <- 7
 nhanes <- nhanes[, -c(11:12)]
 
 # The overall information of participants in this questionnaire, including gender, age, race, testosterone level, estradiol level, SHBG level, BMI level, smoking status, alcohol consumption and physical activity
@@ -123,7 +132,7 @@ summary(nhanes)
 library(ggplot2)
 library(cowplot)
 
-# Box plots for age, race, BMI, smoke, alcohol, and activity
+# Box plots and corresponding linear regression results for age, race, BMI, smoke, alcohol, and activity
 g1 <- ggplot(data = nhanes, aes(x = age, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
 g2 <- ggplot(data = nhanes, aes(x = age, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
 g3 <- ggplot(data = nhanes, aes(x = age, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
@@ -133,7 +142,6 @@ plot_grid(g1, g2, g3, labels = "AUTO")
 summary(lm(testosterone ~ age, data = nhanes))
 summary(lm(estradiol ~ age, data = nhanes))
 summary(lm(SHBG ~ age, data = nhanes))
-# Significant with age
 
 
 r1 <- ggplot(data = nhanes, aes(x = race, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
@@ -142,12 +150,20 @@ r3 <- ggplot(data = nhanes, aes(x = race, y = SHBG)) + geom_boxplot() + ylim(c(1
 
 plot_grid(r1, r2, r3, labels = "AUTO")
 
+summary(lm(testosterone ~ race, data = nhanes))
+summary(lm(estradiol ~ race, data = nhanes))
+summary(lm(SHBG ~ race, data = nhanes)) 
+
 
 b1 <- ggplot(data = nhanes, aes(x = BMI, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
 b2 <- ggplot(data = nhanes, aes(x = BMI, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
 b3 <- ggplot(data = nhanes, aes(x = BMI, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
 plot_grid(b1, b2, b3, labels = "AUTO")
+
+summary(lm(testosterone ~ BMI, data = nhanes))
+summary(lm(estradiol ~ BMI, data = nhanes))
+summary(lm(SHBG ~ BMI, data = nhanes))
 
 
 s1 <- ggplot(data = nhanes, aes(x = smoke, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
@@ -156,12 +172,20 @@ s3 <- ggplot(data = nhanes, aes(x = smoke, y = SHBG)) + geom_boxplot() + ylim(c(
 
 plot_grid(s1, s2, s3, labels = "AUTO")
 
+summary(lm(testosterone ~ smoke, data = nhanes))
+summary(lm(estradiol ~ smoke, data = nhanes))
+summary(lm(SHBG ~ smoke, data = nhanes))
+
 
 h1 <- ggplot(data = nhanes, aes(x = alcohol, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
 h2 <- ggplot(data = nhanes, aes(x = alcohol, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
 h3 <- ggplot(data = nhanes, aes(x = alcohol, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
 plot_grid(h1, h2, h3, labels = "AUTO")
+
+summary(lm(testosterone ~ alcohol, data = nhanes))
+summary(lm(estradiol ~ alcohol, data = nhanes))
+summary(lm(SHBG ~ alcohol, data = nhanes))
 
 
 a1 <- ggplot(data = nhanes, aes(x = factor(activity), y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
@@ -170,23 +194,29 @@ a3 <- ggplot(data = nhanes, aes(x = factor(activity), y = SHBG)) + geom_boxplot(
 
 plot_grid(a1, a2, a3, labels = "AUTO")
 
-
-summary(lm(SHBG ~ age, data = nhanes))
-summary(lm(SHBG ~ age + BMI, data = nhanes))
-summary(lm(SHBG ~ age + race + BMI + smoke + alcohol + activity, data = nhanes))
-
-# Significant predictors are age and BMI, even when adjusting for other variables.
-
+summary(lm(testosterone ~ activity, data = nhanes))
+summary(lm(estradiol ~ activity, data = nhanes))
+summary(lm(SHBG ~ activity, data = nhanes))
 ```
 
 ### Results
-Describe your results and include relevant tables, plots, and code/comments used to obtain them. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
 
 ```{r eval = TRUE}
 library(ggbiplot)
+library(factoextra)
+library(NbClust)
+
+# Significant predictors are age and BMI, even when adjusting for other variables.
+summary(lm(testosterone ~ age + BMI, data = nhanes))
+summary(lm(estradiol ~ age + BMI, data = nhanes))
+summary(lm(SHBG ~ age + BMI, data = nhanes))
+
+summary(lm(testosterone ~ age + race + BMI + smoke + alcohol + activity, data = nhanes))
+summary(lm(estradiol ~ age + race + BMI + smoke + alcohol + activity, data = nhanes))
+summary(lm(SHBG ~ age + race + BMI + smoke + alcohol + activity, data = nhanes))
 
 # Only keep columns of age, testosterone level, estradiol level, SHBG level and BMI
-nhanes.cluster <- nhanes[c(3:8)]
+nhanes.cluster <- nhanes[c(3, 5:8)]
 str(nhanes.cluster)
 
 
@@ -215,19 +245,15 @@ blom = function(x, method="general", alpha=pi/8,
   return(Score)
 }
 
-# Use blom transformation to make hormone marker variables unit-free, so that they are comparable in cluster analysis
+# Use blom transformation to make sex hormone marker variables unit-free, so that they are comparable in cluster analysis
 nhanes.cluster$testosterone <- blom(nhanes.cluster$testosterone, method = "blom")
 nhanes.cluster$estradiol <- blom(nhanes.cluster$estradiol, method = "blom")
 nhanes.cluster$SHBG <- blom(nhanes.cluster$SHBG, method = "blom")
 
 
-# The result of pca indicates that the data are not simply grouped into clustors based on one single variable
-nhanes.pca <- prcomp(nhanes.cluster[ , 3:5], scale = TRUE)
+# The result of pca indicates that the data are not simply grouped into clusters based on one single variable
+nhanes.pca <- prcomp(nhanes.cluster[ , 2:4], scale = TRUE)
 print(nhanes.pca)
-ggbiplot(nhanes.pca, groups = nhanes.cluster$race, circle = TRUE, ellipse = TRUE) +
-    scale_color_discrete(name = '') +
-    theme(legend.direction = 'horizontal', legend.position = 'top')
-
 ggbiplot(nhanes.pca, groups = nhanes.cluster$BMI, circle = TRUE, ellipse = TRUE) +
     scale_color_discrete(name = '') +
     theme(legend.direction = 'horizontal', legend.position = 'top')
@@ -237,9 +263,19 @@ ggbiplot(nhanes.pca, groups = nhanes.cluster$age, circle = TRUE, ellipse = TRUE)
     theme(legend.direction = 'horizontal', legend.position = 'top')
 
 
-nhanes.kmeans <- kmeans(nhanes.cluster[, 3:5], 4)
+# Use Elbow method to determine the optimal number of clusters for k-mean clustering
+fviz_nbclust(nhanes.cluster[, 2:4], kmeans, method = "wss") +
+    geom_vline(xintercept = 4, linetype = 2)+
+  labs(subtitle = "Elbow method")
+
+
+# Perform k-mean clustering using sex steroid hormone markers
+nhanes.kmeans <- kmeans(nhanes.cluster[, 2:4], 4)
 nhanes.kmeans
 
+
+# Plot 2 dimensions at a time to interprete patterns
+# SHBG is most helpful with seperating clusters
 centers <- as.data.frame(nhanes.kmeans$centers)
 
 ggplot(data = nhanes.cluster, aes(testosterone, SHBG, color = factor(nhanes.kmeans$cluster))) +
@@ -254,9 +290,10 @@ ggplot(data = nhanes.cluster, aes(estradiol, SHBG, color = factor(nhanes.kmeans$
     geom_point() +
     geom_point(data = centers, aes(estradiol, SHBG), color = "purple", size = 3)
 
+
 # Assign cluster number to each observation
 nhanes <- cbind(nhanes, clusterNum = nhanes.kmeans$cluster)
-nhanes <- nhanes[c(3:8, 12)]
+nhanes <- nhanes[c(3, 5:8, 12)]
   
 
 # Analyze each cluster for the following:
@@ -264,22 +301,37 @@ nhanes <- nhanes[c(3:8, 12)]
 # Mean of testoserone, estradiol, and SHBG
 nhanes %>%
   group_by(clusterNum) %>%
-  summarise(testosterone = mean(testosterone), estraadiol = mean(estradiol), SHBG = mean(SHBG))
+  summarise(testosterone = mean(testosterone), estradiol = mean(estradiol), SHBG = mean(SHBG))
+# The results shows the following:
+# Observations in cluster 1 have the highest mean estradiol level and the highest mean SHBG level.
+# Observations in cluster 2 have the lowest mean testosterone level and the lowest mean SHBG level.
+# Observations in cluster 3 have the lowest mean estradiol level.
+# Observations in cluster 4 have the highest testosterone level.
 
+# The majority of observasions in cluster 1 are in age range of 12-18 and 39-49 and their weight are normal.
 cluster1 <- subset(nhanes, clusterNum == 1)
-cluster1 <- cluster1[c(1:6)]
+cluster1 <- cluster1[c(1:5)]
 summary(cluster1)
 
+# The majority of observasions in cluster 2 are in age range of 50-69 and are obese.
 cluster2 <- subset(nhanes, clusterNum == 2)
-cluster2 <- cluster2[c(1:6)]
+cluster2 <- cluster2[c(1:5)]
 summary(cluster2)
 
+# The majority of observasions in cluster 3 are in age range of 50-69.
 cluster3 <- subset(nhanes, clusterNum == 3)
-cluster3 <- cluster3[c(1:6)]
+cluster3 <- cluster3[c(1:5)]
 summary(cluster3)
 
+# The majority of observasions in cluster 4 are in age range of 12-18 and are obese.
 cluster4 <- subset(nhanes, clusterNum == 4)
-cluster4 <- cluster4[c(1:6)]
+cluster4 <- cluster4[c(1:5)]
 summary(cluster4)
 
 ```
+
+> Conclusiion
+
+In conclusion, there is no significant correlation found between race, smoking habits, alchohal comsuption, physical activities and sex steroid hormone levels among US women. However, age and BMI are found to be significant predictors. Each sex steroid hormone marker is more likely to be associated with one or more age or BMI groups of observations. Although predictors that are more directly indicating lifestyle are not significant in our case, BMI could be treated as an indirect indicator of lifestyle. 
+
+Based on the data set chosen and the analysis of the data, obese teenage girls are more likely to have higher testosterone level. Obese women in the age range of 50-69 are more likely to have low testosterone and SHBG level. Teenage girls and women in the age range of 39-49 with normal weight are more likely to have higher estradiol and SHBG level. Women in the age range of 50-69 tend to have lower estradiol level. Both teenage girls and women in ange range from 39-69 are more likely to have diseases associated with unhealthy level of sex hormone and obesity increases the possibility for sex hormone related diseases. 
