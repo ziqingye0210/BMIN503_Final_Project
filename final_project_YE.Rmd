@@ -19,6 +19,10 @@ In this section, give a brief a description of your project and its goal, what d
 
 > How does sex hormone vary due to demographics, weight(BMI), smoking habits, alchohal comsuption, physical activities
 
+> people with what demographics or lifestyle tend to have higher or lower testosterone
+
+> Multivariable regression
+
 ### Introduction 
 In the first paragraph, describe the problem addressed, its significance, and some background to motivate the problem.
 
@@ -101,6 +105,8 @@ nhanes$alcohol[is.na(nhanes$alcohol)] <- 0
 nhanes$alcohol <- cut(nhanes$alcohol, breaks=c(-Inf, 0, 3, 6, Inf), labels=c("0", "1-3", "4-6", "6+"))
 nhanes$alcohol <- as.factor(nhanes$alcohol) 
 
+# Divide age into five categories
+nhanes$age <- cut(nhanes$age, breaks=c(11, 18, 29, 49, 69, Inf), labels=c("12-18", "19-29", "39-49", "50-69", "70+"))
 
 # Get the total number of days doing moderate to vigorous activities
 # Observations with days of activities larger than 7 days will be excluded
@@ -112,8 +118,6 @@ nhanes <- nhanes[, -c(11:12)]
 # The overall information of participants in this questionnaire, including gender, age, race, testosterone level, estradiol level, SHBG level, BMI level, smoking status, alcohol consumption and physical activity
 summary(nhanes)
 
-
-
 ```
 
 > Exploratory analysis
@@ -122,47 +126,163 @@ summary(nhanes)
 library(ggplot2)
 library(cowplot)
 
-# Scatter plot for age and each sex hormone marker expression level
-ggplot(data = nhanes, aes(x = age, y = testosterone)) +
-    geom_point()
+# Box plots for age, race, BMI, smoke, alcohol, and activity
+g1 <- ggplot(data = nhanes, aes(x = age, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
+g2 <- ggplot(data = nhanes, aes(x = age, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
+g3 <- ggplot(data = nhanes, aes(x = age, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
-# Box plot for race, BMI, smoke, alcohol, and activity
-r1 <- ggplot(data = nhanes, aes(x = factor(race), y = testosterone)) + geom_boxplot()
-r2 <- ggplot(data = nhanes, aes(x = factor(race), y = estradiol)) + geom_boxplot()
-r3 <- ggplot(data = nhanes, aes(x = factor(race), y = SHBG)) + geom_boxplot()
+plot_grid(g1, g2, g3, labels = "AUTO")
+
+summary(lm(testosterone ~ age, data = nhanes))
+summary(lm(estradiol ~ age, data = nhanes))
+summary(lm(SHBG ~ age, data = nhanes))
+# Significant with age
+
+
+r1 <- ggplot(data = nhanes, aes(x = race, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
+r2 <- ggplot(data = nhanes, aes(x = race, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
+r3 <- ggplot(data = nhanes, aes(x = race, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
 plot_grid(r1, r2, r3, labels = "AUTO")
 
 
-b1 <- ggplot(data = nhanes, aes(x = factor(BMI), y = testosterone)) + geom_boxplot()
-b2 <- ggplot(data = nhanes, aes(x = factor(BMI), y = estradiol)) + geom_boxplot()
-b3 <- ggplot(data = nhanes, aes(x = factor(BMI), y = SHBG)) + geom_boxplot()
+b1 <- ggplot(data = nhanes, aes(x = BMI, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
+b2 <- ggplot(data = nhanes, aes(x = BMI, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
+b3 <- ggplot(data = nhanes, aes(x = BMI, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
 plot_grid(b1, b2, b3, labels = "AUTO")
 
-s1 <- ggplot(data = nhanes, aes(x = factor(smoke), y = testosterone)) + geom_boxplot()
-s2 <- ggplot(data = nhanes, aes(x = factor(smoke), y = estradiol)) + geom_boxplot()
-s3 <- ggplot(data = nhanes, aes(x = factor(smoke), y = SHBG)) + geom_boxplot()
+
+s1 <- ggplot(data = nhanes, aes(x = smoke, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
+s2 <- ggplot(data = nhanes, aes(x = smoke, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
+s3 <- ggplot(data = nhanes, aes(x = smoke, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
 plot_grid(s1, s2, s3, labels = "AUTO")
 
 
-h1 <- ggplot(data = nhanes, aes(x = factor(alcohol), y = testosterone)) + geom_boxplot()
-h2 <- ggplot(data = nhanes, aes(x = factor(alcohol), y = estradiol)) + geom_boxplot()
-h3 <- ggplot(data = nhanes, aes(x = factor(alcohol), y = SHBG)) + geom_boxplot()
+h1 <- ggplot(data = nhanes, aes(x = alcohol, y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
+h2 <- ggplot(data = nhanes, aes(x = alcohol, y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
+h3 <- ggplot(data = nhanes, aes(x = alcohol, y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
 plot_grid(h1, h2, h3, labels = "AUTO")
 
-a1 <- ggplot(data = nhanes, aes(x = factor(activity), y = testosterone)) + geom_boxplot()
-a2 <- ggplot(data = nhanes, aes(x = factor(activity), y = estradiol)) + geom_boxplot()
-a3 <- ggplot(data = nhanes, aes(x = factor(activity), y = SHBG)) + geom_boxplot()
+
+a1 <- ggplot(data = nhanes, aes(x = factor(activity), y = testosterone)) + geom_boxplot() + ylim(c(1, 200))
+a2 <- ggplot(data = nhanes, aes(x = factor(activity), y = estradiol)) + geom_boxplot() + ylim(c(1, 2000))
+a3 <- ggplot(data = nhanes, aes(x = factor(activity), y = SHBG)) + geom_boxplot() + ylim(c(1, 400))
 
 plot_grid(a1, a2, a3, labels = "AUTO")
+
+
+summary(lm(SHBG ~ age, data = nhanes))
+summary(lm(SHBG ~ age + BMI, data = nhanes))
+summary(lm(SHBG ~ age + race + BMI + smoke + alcohol + activity, data = nhanes))
+
+# Significant predictors are age and BMI, even when adjusting for other variables.
+
 ```
 
 ### Results
 Describe your results and include relevant tables, plots, and code/comments used to obtain them. End with a brief conclusion of your findings related to the question you set out to address. You can include references if you'd like, but this is not required.
 
 ```{r eval = TRUE}
+library(ggbiplot)
+
+# Only keep columns of age, testosterone level, estradiol level, SHBG level and BMI
+nhanes.cluster <- nhanes[c(3:8)]
+str(nhanes.cluster)
+
+
+# funcion of blom transformation
+blom = function(x, method="general", alpha=pi/8, 
+                complete=FALSE, na.last="keep", na.rm=TRUE,
+                adjustN=TRUE,
+                min=1, max=10, ...){
+  if(complete){x=x[complete.cases(x)]}
+  Ranks = rank(x, na.last=na.last, ...)
+  if(adjustN==FALSE){N = length(x)}
+  if(adjustN==TRUE) {N = sum(complete.cases(x))}
+  if(method=="blom")   {Score = qnorm((Ranks-0.375)/(N+0.25))}
+  if(method=="vdw")    {Score = qnorm((Ranks)/(N+1))}
+  if(method=="tukey")  {Score = qnorm((Ranks-1/3)/(N+1/3))}
+  if(method=="rankit") {Score = qnorm((Ranks-1/2)/(N))}
+  if(method=="elfving"){Score = qnorm((Ranks-pi/8)/(N-pi/4+1))}
+  if(method=="general"){Score = qnorm((Ranks-alpha)/(N-2*alpha+1))}
+  if(method=="zscore") {Score = (x-mean(x, na.rm=na.rm))/sd(x, na.rm=na.rm)}
+  if(method=="scale")  {
+    Score = (((x - min(x, na.rm=na.rm)) * 
+            (max - min)) / 
+            (max(x, na.rm=na.rm) - min(x, na.rm=na.rm)) + 
+             min)
+  }
+  return(Score)
+}
+
+# Use blom transformation to make hormone marker variables unit-free, so that they are comparable in cluster analysis
+nhanes.cluster$testosterone <- blom(nhanes.cluster$testosterone, method = "blom")
+nhanes.cluster$estradiol <- blom(nhanes.cluster$estradiol, method = "blom")
+nhanes.cluster$SHBG <- blom(nhanes.cluster$SHBG, method = "blom")
+
+
+# The result of pca indicates that the data are not simply grouped into clustors based on one single variable
+nhanes.pca <- prcomp(nhanes.cluster[ , 3:5], scale = TRUE)
+print(nhanes.pca)
+ggbiplot(nhanes.pca, groups = nhanes.cluster$race, circle = TRUE, ellipse = TRUE) +
+    scale_color_discrete(name = '') +
+    theme(legend.direction = 'horizontal', legend.position = 'top')
+
+ggbiplot(nhanes.pca, groups = nhanes.cluster$BMI, circle = TRUE, ellipse = TRUE) +
+    scale_color_discrete(name = '') +
+    theme(legend.direction = 'horizontal', legend.position = 'top')
+
+ggbiplot(nhanes.pca, groups = nhanes.cluster$age, circle = TRUE, ellipse = TRUE) +
+    scale_color_discrete(name = '') +
+    theme(legend.direction = 'horizontal', legend.position = 'top')
+
+
+nhanes.kmeans <- kmeans(nhanes.cluster[, 3:5], 4)
+nhanes.kmeans
+
+centers <- as.data.frame(nhanes.kmeans$centers)
+
+ggplot(data = nhanes.cluster, aes(testosterone, SHBG, color = factor(nhanes.kmeans$cluster))) +
+    geom_point() +
+    geom_point(data = centers, aes(testosterone, SHBG), color = "purple", size = 3)
+
+ggplot(data = nhanes.cluster, aes(testosterone, estradiol, color = factor(nhanes.kmeans$cluster))) +
+    geom_point() +
+    geom_point(data = centers, aes(testosterone, estradiol), color = "purple", size = 3)
+
+ggplot(data = nhanes.cluster, aes(estradiol, SHBG, color = factor(nhanes.kmeans$cluster))) +
+    geom_point() +
+    geom_point(data = centers, aes(estradiol, SHBG), color = "purple", size = 3)
+
+# Assign cluster number to each observation
+nhanes <- cbind(nhanes, clusterNum = nhanes.kmeans$cluster)
+nhanes <- nhanes[c(3:8, 12)]
+  
+
+# Analyze each cluster for the following:
+# Number of people from each age group, race or BMI range
+# Mean of testoserone, estradiol, and SHBG
+nhanes %>%
+  group_by(clusterNum) %>%
+  summarise(testosterone = mean(testosterone), estraadiol = mean(estradiol), SHBG = mean(SHBG))
+
+cluster1 <- subset(nhanes, clusterNum == 1)
+cluster1 <- cluster1[c(1:6)]
+summary(cluster1)
+
+cluster2 <- subset(nhanes, clusterNum == 2)
+cluster2 <- cluster2[c(1:6)]
+summary(cluster2)
+
+cluster3 <- subset(nhanes, clusterNum == 3)
+cluster3 <- cluster3[c(1:6)]
+summary(cluster3)
+
+cluster4 <- subset(nhanes, clusterNum == 4)
+cluster4 <- cluster4[c(1:6)]
+summary(cluster4)
 
 ```
