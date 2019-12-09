@@ -299,28 +299,22 @@ nhanes <- nhanes[c(3, 5:8, 12)]
 nhanes %>%
   group_by(clusterNum) %>%
   summarise(testosterone = mean(testosterone), estradiol = mean(estradiol), SHBG = mean(SHBG))
-# The results shows the following:
-# Observations in cluster 1 have the highest mean estradiol level and the highest mean SHBG level.
-# Observations in cluster 2 have the lowest mean testosterone level and the lowest mean SHBG level.
-# Observations in cluster 3 have the lowest mean estradiol level.
-# Observations in cluster 4 have the highest testosterone level.
 
-# The majority of observasions in cluster 1 are in age range of 12-18 and 39-49 and their weight are normal.
+# The results shows the following:
+# Observations in each clusters have the following trend, one cluster tends to have higher estradiol level and higher SHBG level, one cluster tends to have lower testosterone level, one cluster tends to have the higher testosterone level and lower SHBG level and one cluster tends to have lower estradiol level. Since the result of each time k-mean clustering is performed would lead to slight changes to clusters, it is hard to assign the trend to specific cluster. But each of the clusters would show one of trends described above.
+
 cluster1 <- subset(nhanes, clusterNum == 1)
 cluster1 <- cluster1[c(1:5)]
 summary(cluster1)
 
-# The majority of observasions in cluster 2 are in age range of 50-69 and are obese.
 cluster2 <- subset(nhanes, clusterNum == 2)
 cluster2 <- cluster2[c(1:5)]
 summary(cluster2)
 
-# The majority of observasions in cluster 3 are in age range of 50-69.
 cluster3 <- subset(nhanes, clusterNum == 3)
 cluster3 <- cluster3[c(1:5)]
 summary(cluster3)
 
-# The majority of observasions in cluster 4 are in age range of 12-18 and are obese.
 cluster4 <- subset(nhanes, clusterNum == 4)
 cluster4 <- cluster4[c(1:5)]
 summary(cluster4)
@@ -331,4 +325,4 @@ summary(cluster4)
 
 In conclusion, there is no significant correlation found between race, smoking habits, alchohal comsuption, physical activities and sex steroid hormone levels among US women. However, age and BMI are found to be significant predictors. Each sex steroid hormone marker is more likely to be associated with one or more age or BMI groups of observations. Although predictors that are more directly indicating lifestyle are not significant in our case, BMI could be treated as an indirect indicator of lifestyle. 
 
-Based on the data set chosen and the analysis of the data, obese teenage girls are more likely to have higher testosterone level. Obese women in the age range of 50-69 are more likely to have low testosterone and SHBG level. Teenage girls and women in the age range of 39-49 with normal weight are more likely to have higher estradiol and SHBG level. Women in the age range of 50-69 tend to have lower estradiol level. Both teenage girls and women in ange range from 39-69 are more likely to have diseases associated with unhealthy level of sex hormone and obesity increases the possibility for sex hormone related diseases. 
+Based on the data set chosen and the analysis of the data, obese teenage girls are more likely to have higher testosterone level. Obese women in the age range of 50-69 are more likely to have low testosterone level. Teenage girls and women in the age range of 39-49 with normal weight are more likely to have higher estradiol and SHBG level. Women in the age range of 50-69 tend to have lower estradiol level. Both teenage girls and women in ange range from 39-69 are more likely to have diseases associated with unhealthy level of sex hormone and obesity increases the possibility for sex hormone related diseases. 
