@@ -87,7 +87,7 @@ nhanes <- nhanes.data %>%
   filter(!is.na(estradiol)) %>%
   filter(!is.na(SHBG)) %>%
   filter(!is.na(BMI)) %>%
-  mutate(BMI = cut(BMI, breaks=c(0, 18, 25, 30, 65), labels=c("Underweight", "NormalWeight", "Overweight", "Obese"))) %>%
+  mutate(BMI = cut(BMI, breaks=c(0, 18.5, 25, 30, 65), labels=c("Underweight", "NormalWeight", "Overweight", "Obese"))) %>%
   # activity 1 indicates number of days doing vigorous work and activity 2 indicates number of days doing moderate work
   filter(!is.na(activity1)|!is.na(activity2))
 
