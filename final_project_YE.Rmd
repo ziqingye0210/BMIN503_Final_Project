@@ -30,9 +30,8 @@ The data sets used were retrieved from NANES 2015-2016 Demographics Data, Examin
 > Download packages
 
 ```{r eval = TRUE}
-# These two packages are used for determining the optimal number of k-mean clusters
-pkgs <- c("factoextra",  "NbClust")
-install.packages(pkgs)
+#install.packages("factoextra")
+#install.packages("NbClust")
 ```
 
 > Retrieve data
